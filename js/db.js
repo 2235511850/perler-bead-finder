@@ -237,6 +237,20 @@
     await db.delete('patterns', Number(patternId));
   }
 
+  // 复制图纸：深拷贝 colors/replacements，清空 checkedSet，名称加" 副本"后缀
+  async function copyPattern(patternId, opts) {
+    const src = await getPattern(patternId);
+    if (!src) throw new Error('原图纸不存在');
+    const name = (opts && opts.name) || (src.name + ' 副本');
+    return createPattern({
+      name: name,
+      colors: JSON.parse(JSON.stringify(src.colors || [])),
+      checkedSet: [],
+      templateId: null,
+      replacements: JSON.parse(JSON.stringify(src.replacements || []))
+    });
+  }
+
   async function getSetting(key, fallback) {
     await getDB();
     if (_useFallback) {
@@ -369,6 +383,7 @@
     createPattern: createPattern,
     updatePattern: updatePattern,
     deletePattern: deletePattern,
+    copyPattern: copyPattern,
     getSetting: getSetting,
     setSetting: setSetting,
     getLowStock,

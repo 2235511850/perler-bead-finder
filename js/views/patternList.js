@@ -51,6 +51,7 @@
                   </a>
                   <div class="flex flex-col gap-1">
                     <a href="#/patterns/${p.patternId}/edit" class="btn btn-ghost text-xs">编辑</a>
+                    <button class="btn btn-ghost text-xs" data-copy="${p.patternId}">复制</button>
                     <button class="btn btn-ghost text-xs text-red-600" data-del="${p.patternId}">删除</button>
                   </div>
                 </div>
@@ -67,6 +68,14 @@
         if (!confirm('确认删除这张图纸？此操作不可恢复。')) return;
         await DB.deletePattern(id);
         Toast.show('已删除');
+        render(main);
+      });
+    });
+    main.querySelectorAll('[data-copy]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = Number(btn.getAttribute('data-copy'));
+        const copy = await DB.copyPattern(id);
+        Toast.show(`已复制为「${copy.name}」`);
         render(main);
       });
     });

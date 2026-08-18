@@ -6,7 +6,10 @@
     return `
       <div class="flex items-center justify-between mb-3">
         <a href="#/patterns" class="text-sm text-slate-500">← 图纸列表</a>
-        <a href="#/patterns/${patternId}/edit" class="text-sm text-slate-500">编辑</a>
+        <div class="flex gap-3">
+          <button id="copyPatternBtn" class="text-sm text-slate-500">复制</button>
+          <a href="#/patterns/${patternId}/edit" class="text-sm text-slate-500">编辑</a>
+        </div>
       </div>
       <div class="card mb-3">
         <div id="headerInfo"></div>
@@ -17,6 +20,17 @@
         </div>
       </div>
     `;
+  }
+
+  // 绑定复制按钮（各视图渲染 header 后调用）
+  function bindCopyBtn(patternId) {
+    const btn = document.getElementById('copyPatternBtn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const copy = await DB.copyPattern(patternId);
+      Toast.show(`已复制为「${copy.name}」`);
+      location.hash = `#/patterns/${copy.patternId}`;
+    });
   }
 
   async function ensurePattern(main, patternId) {
@@ -92,6 +106,7 @@
 
     main.innerHTML = header(patternId, 'group') + `<div id="groupBody"></div>`;
     document.getElementById('headerInfo').innerHTML = renderHeaderInfo(pattern);
+    bindCopyBtn(patternId);
     const body = document.getElementById('groupBody');
 
     if (!hasBoards) {
@@ -229,5 +244,5 @@
     return buildIncomingMap(pattern && pattern.replacements).get(code) || [];
   }
 
-  window.PatternDetailView = { renderGrouped, renderHeaderInfo, ensurePattern, header, buildIncomingMap, getIncomingReplacements };
+  window.PatternDetailView = { renderGrouped, renderHeaderInfo, ensurePattern, header, buildIncomingMap, getIncomingReplacements, bindCopyBtn };
 })();

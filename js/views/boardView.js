@@ -13,6 +13,7 @@
     const PD = PatternDetailView;
     main.innerHTML = PD.header(patternId, 'board') + `<div id="boardBody"></div>`;
     document.getElementById('headerInfo').innerHTML = PD.renderHeaderInfo(pattern);
+    PD.bindCopyBtn(patternId);
     const body = document.getElementById('boardBody');
 
     if (!State.boards || !State.boards.length) {

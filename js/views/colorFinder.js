@@ -68,6 +68,7 @@
     const PD = PatternDetailView;
     main.innerHTML = PD.header(patternId, 'find') + `<div id="finderBody"></div>`;
     document.getElementById('headerInfo').innerHTML = PD.renderHeaderInfo(pattern);
+    PD.bindCopyBtn(patternId);
     const body = document.getElementById('finderBody');
 
     body.innerHTML = `
