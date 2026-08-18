@@ -276,6 +276,86 @@
     return setLowStock(arr);
   }
 
+  // ---------- 数据导入/导出 ----------
+
+  // 导出全部数据为 JSON 对象
+  async function exportAll() {
+    const [boards, patterns, lowStock] = await Promise.all([
+      getAllBoards(),
+      getAllPatterns(),
+      getLowStock()
+    ]);
+    return {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      boards: boards,
+      patterns: patterns,
+      lowStockCodes: lowStock
+    };
+  }
+
+  // 导入数据
+  // mode: 'merge'（合并，同 ID 覆盖） | 'overwrite'（清空后写入）
+  async function importData(data, mode) {
+    if (!data || typeof data !== 'object') throw new Error('数据格式无效');
+    if (!Array.isArray(data.boards) || !Array.isArray(data.patterns)) {
+      throw new Error('数据缺少 boards 或 patterns 字段');
+    }
+    const m = mode === 'overwrite' ? 'overwrite' : 'merge';
+
+    if (m === 'overwrite') {
+      // 清空现有数据
+      const [oldBoards, oldPatterns] = await Promise.all([getAllBoards(), getAllPatterns()]);
+      await Promise.all(oldBoards.map(b => deleteBoard(b.boardId)));
+      await Promise.all(oldPatterns.map(p => deletePattern(p.patternId)));
+    }
+
+    // 写入 boards（merge 模式下同 ID 覆盖）
+    let boardsAdded = 0, boardsUpdated = 0;
+    for (const b of data.boards) {
+      if (m === 'merge') {
+        const existing = await getBoard(b.boardId);
+        if (existing) boardsUpdated++;
+        else boardsAdded++;
+      }
+      await saveBoard(b);
+    }
+
+    // 写入 patterns（merge 模式下同 patternId 覆盖，否则 add 新条目）
+    let patternsAdded = 0, patternsUpdated = 0;
+    for (const p of data.patterns) {
+      if (m === 'merge' && p.patternId) {
+        const existing = await getPattern(p.patternId);
+        if (existing) {
+          await updatePattern(p);
+          patternsUpdated++;
+          continue;
+        }
+      }
+      // 新增：去掉 patternId 让 DB 自动分配
+      const { patternId, ...rest } = p;
+      await createPattern(rest);
+      patternsAdded++;
+    }
+
+    // 写入告急色号（合并）
+    if (Array.isArray(data.lowStockCodes)) {
+      if (m === 'overwrite') {
+        await setLowStock(data.lowStockCodes);
+      } else {
+        const cur = new Set(await getLowStock());
+        data.lowStockCodes.forEach(c => cur.add(c));
+        await setLowStock([...cur]);
+      }
+    }
+
+    return {
+      mode: m,
+      boardsAdded, boardsUpdated,
+      patternsAdded, patternsUpdated
+    };
+  }
+
   window.DB = {
     getAllBoards: getAllBoards,
     getBoard: getBoard,
@@ -293,6 +373,8 @@
     setSetting: setSetting,
     getLowStock,
     setLowStock,
-    toggleLowStock
+    toggleLowStock,
+    exportAll,
+    importData
   };
 })();

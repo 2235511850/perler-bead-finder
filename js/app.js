@@ -52,7 +52,49 @@
           ${lowStockCount ? `<span class="badge-low-stock">告急 ${lowStockCount}</span>` : ''}
         </a>
       </div>
+
+      <div class="flex gap-2 mt-4">
+        <button id="exportBtn" class="btn btn-ghost text-xs flex-1">导出数据</button>
+        <button id="importBtn" class="btn btn-ghost text-xs flex-1">导入数据</button>
+      </div>
+      <input type="file" id="importFile" accept=".json" class="hidden" />
     `;
+
+    // ---- 导入导出 ----
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+      const data = await DB.exportAll();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const date = new Date().toISOString().slice(0, 10);
+      a.download = `perler-bead-backup-${date}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.show('已导出备份文件');
+    });
+
+    document.getElementById('importBtn').addEventListener('click', () => {
+      document.getElementById('importFile').click();
+    });
+
+    document.getElementById('importFile').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.boards && !data.patterns) {
+          Toast.show('文件格式不正确');
+          return;
+        }
+        openImportDialog(data);
+      } catch (err) {
+        Toast.show('读取文件失败：' + (err.message || '未知错误'));
+      }
+      e.target.value = '';
+    });
   }
 
   // 记录最近图纸
@@ -61,6 +103,77 @@
   }
 
   Router.add('/', async () => home());
+
+  // ---- 导入确认弹窗 ----
+  function openImportDialog(data) {
+    let root = document.getElementById('importDialogRoot');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'importDialogRoot';
+      document.body.appendChild(root);
+    }
+    const boardCount = (data.boards || []).length;
+    const patternCount = (data.patterns || []).length;
+    const lowCount = (data.lowStockCodes || []).length;
+    const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('zh-CN') : '未知时间';
+
+    root.innerHTML = `
+      <div class="modal-mask" id="importMask">
+        <div class="modal-panel" style="max-width:420px;">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-slate-800">导入数据</h3>
+            <button id="importClose" class="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+          </div>
+          <div class="text-xs text-slate-500 space-y-1 mb-4">
+            <div>备份时间：${dateStr}</div>
+            <div>包含：${boardCount} 块板 · ${patternCount} 张图纸${lowCount ? ' · ' + lowCount + ' 个告急色号' : ''}</div>
+          </div>
+          <div class="space-y-2 mb-4">
+            <label class="flex items-start gap-2 cursor-pointer p-3 rounded-lg border border-slate-200 hover:border-indigo-300">
+              <input type="radio" name="importMode" value="merge" checked class="mt-0.5" />
+              <div>
+                <div class="text-sm font-medium text-slate-700">合并导入</div>
+                <div class="text-xs text-slate-500">保留现有数据，同 ID 的板/图纸会被覆盖，新的会添加</div>
+              </div>
+            </label>
+            <label class="flex items-start gap-2 cursor-pointer p-3 rounded-lg border border-slate-200 hover:border-rose-300">
+              <input type="radio" name="importMode" value="overwrite" class="mt-0.5" />
+              <div>
+                <div class="text-sm font-medium text-rose-600">覆盖导入</div>
+                <div class="text-xs text-slate-500">清空当前所有数据，替换为备份内容（不可恢复）</div>
+              </div>
+            </label>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button id="importCancel" class="btn btn-ghost text-sm">取消</button>
+            <button id="importConfirm" class="btn btn-primary text-sm">确认导入</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    function close() { root.innerHTML = ''; }
+    root.querySelector('#importClose').addEventListener('click', close);
+    root.querySelector('#importCancel').addEventListener('click', close);
+    root.querySelector('.modal-mask').addEventListener('click', e => {
+      if (e.target === root.querySelector('.modal-mask')) close();
+    });
+    root.querySelector('#importConfirm').addEventListener('click', async () => {
+      const mode = root.querySelector('input[name="importMode"]:checked').value;
+      if (mode === 'overwrite') {
+        if (!confirm('覆盖导入将清空当前所有数据！确定继续？')) return;
+      }
+      try {
+        close();
+        const result = await DB.importData(data, mode);
+        let msg = `导入完成：板 +${result.boardsAdded} 更${result.boardsUpdated}，图纸 +${result.patternsAdded} 更${result.patternsUpdated}`;
+        Toast.show(msg, 4000);
+        home();
+      } catch (err) {
+        Toast.show('导入失败：' + (err.message || '未知错误'));
+      }
+    });
+  }
 
   Router.add('/boards', () => BoardSetupView.renderList(main));
   Router.add('/boards/:id', p => BoardSetupView.renderEdit(main, p));
