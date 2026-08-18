@@ -102,6 +102,21 @@
     });
   }
 
+  // 键盘弹出时隐藏底部导航，收起时恢复（移动端适配）
+  if (window.visualViewport) {
+    const nav = document.getElementById('appNav');
+    const vv = window.visualViewport;
+    let baselineHeight = vv.height;
+    vv.addEventListener('resize', () => {
+      if (vv.height < baselineHeight - 150) {
+        if (nav) nav.style.display = 'none';
+      } else {
+        baselineHeight = vv.height;
+        if (nav) nav.style.display = '';
+      }
+    });
+  }
+
   // 启动路由
   Router.start();
 })();

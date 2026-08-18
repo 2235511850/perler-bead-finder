@@ -329,7 +329,7 @@
             </div>
             <p class="text-xs text-slate-500 mb-3">以下 ${suggestions.length} 个色号不在你录入的板上，按感知色差推荐板上最相近色。</p>
             ${summaryHtml}
-            <div class="overflow-auto max-h-80">
+            <div class="suggest-table-wrap overflow-auto max-h-80">
               <table class="suggest-table">
                 <thead><tr><th>原色</th><th>推荐</th><th>位置</th><th>色差</th><th></th></tr></thead>
                 <tbody>${rows}</tbody>
@@ -642,6 +642,12 @@
     window.addEventListener('hashchange', refreshLowStockCache);
 
     document.getElementById('pText').addEventListener('input', Util.debounce(parseAndRender, 150));
+    // 键盘弹出时确保可见
+    document.getElementById('pText').addEventListener('focus', () => {
+      setTimeout(() => {
+        document.getElementById('pText').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, 300);
+    });
     parseAndRender();
 
     document.getElementById('saveBtn').addEventListener('click', async () => {

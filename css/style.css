@@ -1,6 +1,7 @@
 :root {
-  --cell-size: 44px;
+  --cell-size: clamp(32px, calc((100vw - 56px) / 6), 44px);
   --cell-gap: 4px;
+  --nav-h: 4rem;
 }
 
 html, body {
@@ -33,7 +34,7 @@ html, body {
   border: 1px solid #cbd5e1;
   border-radius: 0.375rem;
   background-color: #fff;
-  font-size: 0.85rem;
+  font-size: 16px; /* ≥16px 避免 iOS 聚焦自动缩放 */
   padding: 0;
   outline: none;
 }
@@ -74,11 +75,13 @@ html, body {
   background-color: #fef3c7;
 }
 
+/* 板网格列数自适应：由 JS 设置 --board-cols，默认 6 */
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(6, var(--cell-size));
+  grid-template-columns: repeat(var(--board-cols, 6), var(--cell-size));
   gap: var(--cell-gap);
   width: max-content;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -247,8 +250,14 @@ html, body {
 
 @media (max-width: 480px) {
   :root {
-    --cell-size: 38px;
+    --cell-size: clamp(28px, calc((100vw - 48px) / var(--board-cols, 6)), 38px);
     --cell-gap: 3px;
+    --nav-h: 3.75rem;
+  }
+  /* 小屏单列堆叠告急汇总行 */
+  .low-stock-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
   }
 }
 
@@ -640,4 +649,86 @@ html, body {
   background: #e0e7ff;
   color: #4338ca;
   border-color: #c7d2fe;
+}
+
+/* ================== 移动端适配 ================== */
+
+/* 底部导航安全区 */
+#appNav {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* 弹窗自适应小屏 */
+.modal-panel {
+  max-width: min(640px, calc(100vw - 2rem));
+  max-height: 85vh;
+}
+
+/* 推荐表格容器横向滚动 */
+.suggest-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.suggest-table {
+  min-width: 420px;
+}
+
+/* Tab 栏滑动优化 */
+.tab-bar {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.tab-bar a {
+  scroll-snap-align: start;
+}
+
+/* 触控目标扩大：视觉不变，加透明命中区 */
+.cell-low-btn, .board-delete-btn {
+  position: absolute;
+}
+.cell-low-btn::before, .board-delete-btn::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+}
+
+/* 小屏: 板选择器自适应列数 */
+@media (max-width: 480px) {
+  .board-picker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)) !important;
+  }
+
+  /* 推荐表格小屏简化为卡片 */
+  .suggest-table thead { display: none; }
+  .suggest-table, .suggest-table tbody, .suggest-table tr, .suggest-table td {
+    display: block;
+    width: 100%;
+  }
+  .suggest-table tr {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+  }
+  .suggest-table td {
+    border-bottom: none;
+    padding: 0.25rem 0;
+  }
+
+  /* 弹窗在小屏改为底部抽屉 */
+  .modal-mask {
+    align-items: flex-end;
+  }
+  .modal-panel {
+    border-radius: 1rem 1rem 0 0;
+    max-height: 90vh;
+    width: 100%;
+    max-width: 100%;
+    animation: slide-up 0.2s ease;
+  }
+  @keyframes slide-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
 }

@@ -200,7 +200,7 @@
                   ${Util.escapeHtml(b.name || `板${b.boardId}`)}
                   ${lowCount ? `<span class="badge-low-stock" title="${Util.escapeHtml(lowHere.join('、'))}">⚠ ${lowCount}</span>` : ''}
                 </div>
-                <div class="board-grid my-2" style="--cell-size:24px; --cell-gap:2px; grid-template-columns: repeat(${cols}, var(--cell-size));">
+                <div class="board-grid my-2" style="--cell-size:24px; --cell-gap:2px; --board-cols:${cols};">
                   ${Array.from({ length: total }).map((_, i) => {
                     const code = (b.cells || [])[i] || '';
                     const isLow = code && lowSet.has(Util.normalizeCode(code));
@@ -410,7 +410,7 @@
               ? '当前为<strong>告急模式</strong>：输入或编辑格子后，失焦将自动标记为告急。'
               : `行号从上到下：1→${rows}；列号从左到右：1→${cols}。点击右上角"一键录入"可批量粘贴整板色号。`}
           </p>
-          <div class="board-grid" id="boardGrid" style="grid-template-columns: repeat(${cols}, var(--cell-size));">${cellsHtml}</div>
+          <div class="board-grid" id="boardGrid" style="--board-cols:${cols};">${cellsHtml}</div>
           <div class="flex justify-between items-center mt-3 text-xs text-slate-500">
             <span>已填 <span id="filledCount">${board.cells.filter(c => String(c).trim()).length}</span> / ${total}</span>
             <div class="flex gap-2">
@@ -597,6 +597,8 @@
       document.body.appendChild(root);
     }
     const initialSample = buildBulkSample(rows, cols);
+    // 根据屏高限制 textarea rows
+    const screenRows = Math.min(10, Math.max(4, Math.floor(window.innerHeight / 60) - 4));
     root.innerHTML = `
       <div class="modal-mask" id="bulkInputMask">
         <div class="modal-panel" style="max-width:560px;">
@@ -618,7 +620,7 @@
             </div>
           </div>
 
-          <textarea id="bulkText" class="textarea font-mono text-sm" rows="${Math.min(10, rows + 2)}" placeholder="例如：&#10;A1 A2 A3 A4 A5 A6&#10;B1 B2 B3 B4 B5 B6&#10;..."></textarea>
+          <textarea id="bulkText" class="textarea font-mono text-sm" rows="${Math.min(10, rows + 2, screenRows)}" placeholder="例如：&#10;A1 A2 A3 A4 A5 A6&#10;B1 B2 B3 B4 B5 B6&#10;..."></textarea>
 
           <div id="bulkPreview" class="mt-2 text-xs text-slate-500"></div>
 
@@ -700,7 +702,15 @@
     // 默认填示例
     ta.value = initialSample;
     refreshPreview();
-    setTimeout(() => ta.focus(), 0);
+    setTimeout(() => {
+      ta.focus();
+      ta.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 100);
+
+    // 键盘弹出时确保可见
+    ta.addEventListener('focus', () => {
+      setTimeout(() => ta.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+    });
   }
 
   window.BoardSetupView = {

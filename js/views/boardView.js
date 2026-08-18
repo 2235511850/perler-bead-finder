@@ -46,8 +46,8 @@
       const wrap = document.createElement('div');
       wrap.className = 'card mb-3';
       wrap.innerHTML = `
-        <div class="text-xs text-slate-500 mb-2">切换板</div>
-        <div class="grid grid-cols-3 gap-2">
+        <div class="text-xs text-slate-500 mb-2">切换板（左右滑动切换）</div>
+        <div class="grid grid-cols-3 gap-2 board-picker-grid">
           ${State.boards.map(b => `
             <a href="#/patterns/${patternId}/board/${b.boardId}" class="text-center py-2 rounded-md text-sm ${b.boardId === activeBoardId ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'bg-slate-100 text-slate-700'}">
               ${Util.escapeHtml(b.name)}
@@ -82,6 +82,9 @@
         <div class="board-grid" id="boardCells"></div>
       `;
       const cells = card.querySelector('#boardCells');
+      // 动态设置板列数供 CSS 自适应
+      cells.style.setProperty('--board-cols', (board.layout && board.layout.cols) || 6);
+      cells.classList.add('board-grid');
       // 反向索引：色号 -> 该色号曾由哪些原色号替代而来
       const incomingMap = PatternDetailView.buildIncomingMap(pattern.replacements);
       cells.innerHTML = board.cells.map((code, i) => {
@@ -142,6 +145,32 @@
       body.appendChild(renderBoardPicker());
       body.appendChild(renderActiveBoard());
     }
+
+    // ---- 左右滑动手势切换板 ----
+    let touchStartX = null;
+    let touchStartY = null;
+    body.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    body.addEventListener('touchend', (e) => {
+      if (touchStartX === null) return;
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      const dy = e.changedTouches[0].clientY - touchStartY;
+      touchStartX = null;
+      touchStartY = null;
+      // 水平滑动 且 垂直位移小
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+      const idx = State.boards.findIndex(b => b.boardId === activeBoardId);
+      if (dx < 0 && idx < State.boards.length - 1) {
+        // 左滑 -> 下一块
+        location.hash = `#/patterns/${patternId}/board/${State.boards[idx + 1].boardId}`;
+      } else if (dx > 0 && idx > 0) {
+        // 右滑 -> 上一块
+        location.hash = `#/patterns/${patternId}/board/${State.boards[idx - 1].boardId}`;
+      }
+    }, { passive: true });
 
     renderAll();
   }
