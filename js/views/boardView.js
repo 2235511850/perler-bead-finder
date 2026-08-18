@@ -29,18 +29,18 @@
     const focusMatch = hash.match(/[?&]focus=([^&]+)/);
     const focusCode = focusMatch ? Util.normalizeCode(decodeURIComponent(focusMatch[1])) : null;
     if (focusMatch) {
-      // 清理 URL，避免刷新还带 focus
       const cleanHash = hash.split('?')[0];
       history.replaceState(null, '', cleanHash);
     }
 
     let activeBoardId = requestedBoardId;
     if (!activeBoardId || !State.boards.find(b => b.boardId === activeBoardId)) {
-      // 自动找一块有图纸色号的板
       const codes = new Set(pattern.colors.map(c => c.code));
       const candidate = State.boards.find(b => b.cells.some(c => codes.has(Util.normalizeCode(c))));
       activeBoardId = candidate ? candidate.boardId : (State.boards[0] && State.boards[0].boardId) || 1;
     }
+
+    const lowStock = new Set(await DB.getLowStock());
 
     function renderBoardPicker() {
       const wrap = document.createElement('div');
@@ -82,16 +82,27 @@
         <div class="board-grid" id="boardCells"></div>
       `;
       const cells = card.querySelector('#boardCells');
+      // 反向索引：色号 -> 该色号曾由哪些原色号替代而来
+      const incomingMap = PatternDetailView.buildIncomingMap(pattern.replacements);
       cells.innerHTML = board.cells.map((code, i) => {
         const c = Util.normalizeCode(code);
         const isNeed = c && needCodes.has(c);
         const isDone = c && checked.has(c);
         const isFocus = c && c === focusCode;
+        const isLow = c && lowStock.has(c);
+        const hasRepl = c && incomingMap.has(c);
         let cls = 'cell-display';
         if (!c) cls += ' empty';
         else if (isDone) cls += ' done';
         if (isFocus) cls += ' match';
-        return `<div class="${cls}" data-i="${i}" data-code="${Util.escapeHtml(c)}" style="cursor:${isNeed ? 'pointer' : 'default'}; ${isNeed ? '' : 'opacity:0.55;'}">${c ? Util.escapeHtml(c) : '·'}</div>`;
+        if (isLow) cls += ' low-stock';
+        if (hasRepl) cls += ' has-replacement';
+        const warn = isLow ? '<span class="low-warn-dot" title="库存告急">!</span>' : '';
+        // 原色角标（删除线原色号，截断显示）
+        const replBadge = hasRepl
+          ? `<span class="repl-badge" title="原色：${incomingMap.get(c).map(x => x.from).join('、')}">${incomingMap.get(c).map(x => `<span class="line-through">${Util.escapeHtml(x.from)}</span>`).join(',')}</span>`
+          : '';
+        return `<div class="${cls}" data-i="${i}" data-code="${Util.escapeHtml(c)}" style="position:relative;cursor:${isNeed ? 'pointer' : 'default'}; ${isNeed ? '' : 'opacity:0.55;'}">${replBadge}${c ? Util.escapeHtml(c) : '·'}${warn}</div>`;
       }).join('');
 
       const stats = card.querySelector('#boardStats');

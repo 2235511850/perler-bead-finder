@@ -8,6 +8,7 @@
     const patterns = await DB.getAllPatterns();
     const filled = boards.filter(b => b.cells && b.cells.filter(c => String(c).trim()).length > 0).length;
     const lastId = await DB.getSetting('lastActivePatternId', null);
+    const lowStockCount = (await DB.getLowStock()).length;
 
     main.innerHTML = `
       <div class="text-center py-8">
@@ -19,7 +20,7 @@
       <div class="grid grid-cols-2 gap-3 mb-6">
         <div class="card text-center">
           <div class="text-xs text-slate-500">板模板</div>
-          <div class="text-2xl font-bold text-slate-800 mt-1">${filled}/6</div>
+          <div class="text-2xl font-bold text-slate-800 mt-1">${filled}/${boards.length}</div>
         </div>
         <div class="card text-center">
           <div class="text-xs text-slate-500">图纸数量</div>
@@ -46,7 +47,10 @@
       <div class="space-y-3">
         <a href="#/patterns/new" class="btn btn-primary w-full">+ 新建图纸</a>
         <a href="#/patterns" class="btn btn-secondary w-full">查看图纸列表（${patterns.length}）</a>
-        <a href="#/boards" class="btn btn-secondary w-full">录入板模板（${filled}/6）</a>
+        <a href="#/boards" class="btn btn-secondary w-full flex items-center justify-between">
+          <span>录入板模板（${filled}/${boards.length}）</span>
+          ${lowStockCount ? `<span class="badge-low-stock">告急 ${lowStockCount}</span>` : ''}
+        </a>
       </div>
     `;
   }
@@ -89,8 +93,8 @@
     return BoardViewCtl.render(main, p);
   });
 
-  // Service Worker
-  if ('serviceWorker' in navigator) {
+  // 注意：file:// 协议下 Service Worker 不可用，此功能仅部署到 http(s) 时生效
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(err => {
         console.warn('SW register failed', err);

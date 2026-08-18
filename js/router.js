@@ -30,6 +30,7 @@
           Toast.show('页面加载出错：' + (e && e.message ? e.message : '未知错误'));
         }
         updateNav();
+        fireChange();
         return;
       }
     }
@@ -40,6 +41,7 @@
         <a href="#/" class="btn btn-primary">回首页</a>
       </div>`;
     updateNav();
+    fireChange();
   }
   function updateNav() {
     document.querySelectorAll('.nav-link').forEach(a => {
@@ -58,5 +60,13 @@
     dispatch();
   }
 
-  window.Router = { add, start, dispatch };
+  const onChangeListeners = [];
+  function onChange(cb) {
+    onChangeListeners.push(cb);
+  }
+  function fireChange() {
+    onChangeListeners.forEach(cb => { try { cb(); } catch (e) { console.error(e); } });
+  }
+
+  window.Router = { add, start, dispatch, onChange };
 })();

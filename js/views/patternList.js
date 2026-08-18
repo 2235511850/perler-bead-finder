@@ -21,6 +21,7 @@
             const codePct = prog.code.total ? Math.round(prog.code.done / prog.code.total * 100) : 0;
             const beadPct = prog.bead.total ? Math.round(prog.bead.done / prog.bead.total * 100) : 0;
             const complete = prog.code.total > 0 && prog.code.done === prog.code.total;
+            const replN = (p.replacements || []).length;
             return `
               <div class="card">
                 <div class="flex items-start justify-between gap-3">
@@ -28,6 +29,7 @@
                     <div class="font-semibold text-slate-800 flex items-center gap-2">
                       ${Util.escapeHtml(p.name)}
                       ${complete ? '<span class="text-xs text-emerald-600">已完成</span>' : ''}
+                      ${replN ? `<span class="replaced-from" title="在录入时选用了替代色号"><span class="replaced-from-label">替代</span>${replN}</span>` : ''}
                     </div>
                     <div class="text-xs text-slate-400 mt-1">更新于 ${Util.formatDate(p.updatedAt)}</div>
                     <div class="mt-3 space-y-2">

@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0f172a" />
   <title>拼豆找色助手</title>
-  <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./css/style.css" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -37,11 +36,13 @@
 
   <div id="toastWrap" class="fixed top-16 left-0 right-0 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
   <script src="./js/db.js"></script>
   <script src="./js/state.js"></script>
+  <script src="./js/data/mard221.js"></script>
+  <script src="./js/colorMatch.js"></script>
   <script src="./js/parser.js"></script>
   <script src="./js/router.js"></script>
+  <script src="./js/views/boardSetup.js"></script>
   <script src="./js/views/patternList.js"></script>
   <script src="./js/views/patternEdit.js"></script>
   <script src="./js/views/patternDetail.js"></script>

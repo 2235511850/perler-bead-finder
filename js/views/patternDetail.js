@@ -37,6 +37,22 @@
     const codePct = prog.code.total ? Math.round(prog.code.done / prog.code.total * 100) : 0;
     const beadPct = prog.bead.total ? Math.round(prog.bead.done / prog.bead.total * 100) : 0;
     const complete = prog.code.total > 0 && prog.code.done === prog.code.total;
+    const repls = pattern.replacements || [];
+    const replsHtml = repls.length ? `
+      <div class="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-2">
+        <div class="text-xs text-emerald-800 font-medium mb-1">已替代色号（${repls.length}）</div>
+        <div class="replaced-chips">
+          ${repls.map(r => `
+            <span class="repl-chip">
+              <span class="line-through text-slate-500">${Util.escapeHtml(r.from)}</span>
+              <span class="text-slate-400 mx-1">→</span>
+              <span class="font-mono font-semibold">${Util.escapeHtml(r.to)}</span>
+              ${r.count > 1 ? `<span class="text-[10px] text-slate-400 ml-1">×${r.count}</span>` : ''}
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
     return `
       <div class="flex items-start justify-between">
         <div>
@@ -61,6 +77,7 @@
           <div class="progress-track"><div class="progress-fill beads" style="width:${beadPct}%"></div></div>
         </div>
       </div>
+      ${replsHtml}
     `;
   }
 
@@ -132,14 +149,20 @@
             <div class="space-y-2">
               ${list.map(item => {
                 const isDone = checked.has(item.code);
+                const incoming = PatternDetailView.getIncomingReplacements(pattern, item.code);
+                const replClass = incoming.length ? ' has-replacement' : '';
+                const replChip = incoming.length
+                  ? `<div class="mt-1"><span class="replaced-from"><span class="replaced-from-label">原色</span>${incoming.map(x => `<span class="line-through">${Util.escapeHtml(x.from)}</span>`).join('、')}</span></div>`
+                  : '';
                 return `
-                  <label class="checkbox-row ${isDone ? 'done' : ''}">
+                  <label class="checkbox-row ${isDone ? 'done' : ''}${replClass}">
                     <input type="checkbox" data-code="${item.code}" ${isDone ? 'checked' : ''} />
                     <div class="flex-1">
                       <div class="font-mono text-sm font-semibold">${item.code}</div>
                       <div class="text-xs text-slate-500">
                         位置：${item.pos.map(p => `R${p.row}C${p.col}`).join('、')}
                       </div>
+                      ${replChip}
                     </div>
                     <div class="text-xs text-slate-500">×${codeMap.get(item.code) || 1}</div>
                   </label>
@@ -190,5 +213,21 @@
     renderBody();
   }
 
-  window.PatternDetailView = { renderGrouped, renderHeaderInfo, ensurePattern, header };
+  // 把 replacements 列表（{from, to, count}[]）构造成 Map：toCode -> [{from, count}]
+  // 用于详情页、虚拟板、色号查找器等任意视图查询"这个色号曾由哪些原色号替换而来"
+  function buildIncomingMap(repls) {
+    const map = new Map();
+    (repls || []).forEach(r => {
+      if (!r || !r.to) return;
+      if (!map.has(r.to)) map.set(r.to, []);
+      map.get(r.to).push({ from: r.from, count: r.count || 1 });
+    });
+    return map;
+  }
+
+  function getIncomingReplacements(pattern, code) {
+    return buildIncomingMap(pattern && pattern.replacements).get(code) || [];
+  }
+
+  window.PatternDetailView = { renderGrouped, renderHeaderInfo, ensurePattern, header, buildIncomingMap, getIncomingReplacements };
 })();

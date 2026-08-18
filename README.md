@@ -14,9 +14,28 @@
 - 数据全部存在浏览器本地（IndexedDB），无后端、无账号、可离线
 
 ## 使用方式
-1. 双击 `index.html` 即可在浏览器中打开。
-2. 首次打开建议用 Chrome / Edge / Firefox / Safari 等现代浏览器。
-3. 如果想装成桌面应用，浏览器地址栏右侧会出现「安装」按钮（依赖 Service Worker，PWA 模式）。
+
+### 方式一：本地静态服务器（推荐，数据可持久化）
+1. 双击 `启动.ps1`（需要本机装了 Python 3）
+2. 浏览器自动打开 `http://localhost:8000/`
+3. 数据保存在 IndexedDB，刷新不丢
+
+如果 `启动.ps1` 被系统策略拦截，可以在项目目录里手动执行：
+```
+python -m http.server 8000
+```
+
+### 方式二：双击 `index.html`（最简单，但有限制）
+- 直接在文件管理器里双击 `index.html`
+- 浏览器以 `file://` 协议打开，**Service Worker、PWA 安装、IndexedDB 持久化都会被禁用**
+- 工具会自动降级到"内存模式"运行：UI 一切正常，但**刷新后数据会丢失**
+- 适合临时试用
+
+### 浏览器要求
+支持 ES2017 / IndexedDB 的现代浏览器：
+- Chrome / Edge 88+
+- Firefox 78+
+- Safari 14+
 
 ## 文件结构
 ```
